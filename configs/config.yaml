@@ -1,0 +1,148 @@
+# VAE Configuration for CelebA Dataset
+# Reference: AAIT_Assignment_3.pdf and Task1_VAE_Guide.md
+
+# =============================================================================
+# Model Architecture
+# =============================================================================
+model:
+  # Latent space dimension
+  # Reference: Task1_VAE_Guide.md - "standard values: 128, 256, 512, 1024, 2048"
+  latent_dim: 256
+
+  # Base number of channels (first conv layer output)
+  # Channels double at each downsampling: 64 -> 128 -> 256 -> 512
+  base_channels: 64
+
+  # Whether decoder predicts variance (Gaussian NLL) or uses fixed variance (MSE)
+  # Reference: Task1_VAE_Guide.md Step 5 - "Isotropic decoder is simpler"
+  # Set to false for isotropic decoder (recommended for learning)
+  predict_variance: false
+
+  # Number of residual blocks per resolution level
+  blocks_per_level: 2
+
+  # Input image size (CelebA resized)
+  image_size: 64
+
+  # Number of input channels (RGB)
+  in_channels: 3
+
+# =============================================================================
+# Training
+# =============================================================================
+training:
+  # Batch size
+  # Reference: Task1_VAE_Guide.md Step 1 - "batch_size 16-32 can help prevent mode collapse"
+  batch_size: 32
+
+  # Learning rate
+  # Reference: Task1_VAE_Guide.md Step 6 - "Use the Adam optimizer with a learning rate of 1e-4"
+  lr: 1.0e-4
+
+  # Number of training epochs
+  epochs: 50
+
+  # Number of epochs for KL warmup (linear annealing)
+  # Reference: Task1_VAE_Guide.md Step 8 - KL annealing prevents posterior collapse
+  kl_warmup_epochs: 10
+
+  # Weight decay for optimizer
+  weight_decay: 0.0
+
+  # Mixed precision training (bfloat16 for better numerical stability)
+  use_amp: true
+  amp_dtype: bfloat16
+
+  # Gradient clipping (0 = disabled)
+  grad_clip: 1.0
+
+  # Number of dataloader workers
+  num_workers: 4
+
+  # Pin memory for faster GPU transfer
+  pin_memory: true
+
+# =============================================================================
+# Loss Weights
+# =============================================================================
+loss:
+  # Reconstruction loss weight (MSE or Gaussian NLL)
+  recon_weight: 1.0
+
+  # KL divergence weight (before annealing)
+  # Final weight = kl_weight * annealing_factor
+  kl_weight: 1.0
+
+  # Perceptual loss weight
+  # Reference: Task1_VAE_Guide.md Step 9 - "Adding a perceptual loss can make the training
+  # converge much faster and produce sharper reconstructions"
+  perceptual_weight: 0.1
+
+  # Whether to use perceptual loss
+  use_perceptual: true
+
+# =============================================================================
+# Data
+# =============================================================================
+data:
+  # Path to CelebA dataset root
+  # Dataset will be downloaded here if not present
+  root: ./data
+
+  # Image size (CelebA images resized to this)
+  # Reference: AAIT_Assignment_3.pdf - "64×64 pixel images"
+  image_size: 64
+
+  # Whether to download dataset if not present
+  download: true
+
+# =============================================================================
+# Checkpointing & Logging
+# =============================================================================
+checkpoint:
+  # Directory to save checkpoints
+  save_dir: ./outputs/checkpoints
+
+  # Save checkpoint every N epochs
+  save_every: 10
+
+  # Keep only the best checkpoint (by validation loss)
+  save_best: true
+
+  # Resume from checkpoint path (null = start fresh)
+  resume: null
+
+logging:
+  # Directory to save logs
+  log_dir: ./outputs/logs
+
+  # Directory to save plots
+  plot_dir: ./outputs/plots
+
+  # Log training metrics every N batches
+  log_every: 100
+
+  # Generate visualizations every N epochs
+  visualize_every: 5
+
+# =============================================================================
+# Visualization
+# =============================================================================
+visualization:
+  # Number of interpolation steps between two images
+  n_interpolation_steps: 10
+
+  # Temperature values for sampling
+  # Reference: Task1_VAE_Guide.md - "temps [0.2, 0.5, 1.0, 1.5]"
+  temperatures: [0.2, 0.5, 1.0, 1.5]
+
+  # Number of samples per temperature
+  n_samples_per_temp: 8
+
+  # Number of reconstruction examples to show
+  n_reconstruction_examples: 8
+
+# =============================================================================
+# Random Seed
+# =============================================================================
+seed: 42
