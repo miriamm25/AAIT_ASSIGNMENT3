@@ -35,17 +35,17 @@ from typing import Dict, Optional, Tuple
 import json
 from datetime import datetime
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add src directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
 
-from src.models.vae import VAE
-from src.data.celeba import get_celeba_dataloaders
-from src.losses.kl_divergence import kl_divergence_loss
-from src.losses.reconstruction import mse_loss, gaussian_nll_loss
-from src.losses.perceptual import PerceptualLoss
-from src.utils.kl_annealing import KLAnnealer
-from src.utils.metrics import compute_bpd, compute_elbo
-from src.utils.visualization import (
+from models.vae import VAE
+from data.celeba import get_celeba_dataloaders
+from losses.kl_divergence import kl_divergence_loss
+from losses.reconstruction import mse_loss, gaussian_nll_loss
+from losses.perceptual import PerceptualLoss
+from utils.kl_annealing import KLAnnealer
+from utils.metrics import compute_bpd, compute_elbo
+from utils.visualization import (
     plot_loss_curves,
     plot_reconstructions,
     plot_temperature_samples,
