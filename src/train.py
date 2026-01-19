@@ -36,7 +36,10 @@ import json
 from datetime import datetime
 
 # Add src directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+import os.path as osp
+_src_dir = osp.dirname(osp.abspath(__file__))
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 
 from models.vae import VAE
 from data.celeba import get_celeba_dataloaders
