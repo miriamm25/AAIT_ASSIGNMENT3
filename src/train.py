@@ -27,7 +27,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 from pathlib import Path
 from tqdm import tqdm
@@ -142,7 +142,7 @@ def train_epoch(
         use_amp = config["training"]["use_amp"] and device.type == "cuda"
         amp_dtype = getattr(torch, config["training"]["amp_dtype"])
 
-        with autocast(device_type=device.type, dtype=amp_dtype, enabled=use_amp):
+        with autocast(device.type, dtype=amp_dtype, enabled=use_amp):
             # Forward pass
             output = model(batch)
 
@@ -435,7 +435,7 @@ def main():
     print(f"KL Annealer: {kl_annealer}")
 
     # Create gradient scaler for mixed precision
-    scaler = GradScaler() if config["training"]["use_amp"] and device.type == "cuda" else None
+    scaler = GradScaler("cuda") if config["training"]["use_amp"] and device.type == "cuda" else None
 
     # Initialize loss history
     train_history = {"recon": [], "kl": [], "perceptual": [], "total": []}
