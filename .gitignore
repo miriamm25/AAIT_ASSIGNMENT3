@@ -1,5 +1,6 @@
 # Data directories (large files, download separately on each machine)
-data/
+# Use /data/ to only ignore root-level data dir, not src/data/
+/data/
 
 # Model outputs (can be large)
 outputs/checkpoints/
