@@ -408,7 +408,7 @@ def visualize_identity_transfer_pca(
 
     for i in range(n_subjects):
         # Subject original
-        img = subjects[i].permute(1, 2, 0).numpy()
+        img = subjects[i].cpu().permute(1, 2, 0).numpy()
         img = np.clip(img, 0, 1)
         axes[i, 0].imshow(img)
         axes[i, 0].axis('off')
@@ -417,7 +417,7 @@ def visualize_identity_transfer_pca(
 
         # Morphed toward each anchor
         for j in range(n_anchors):
-            morphed = results[f"morphed_anchor_{j}"][i].permute(1, 2, 0).numpy()
+            morphed = results[f"morphed_anchor_{j}"][i].cpu().permute(1, 2, 0).numpy()
             morphed = np.clip(morphed, 0, 1)
             axes[i, j + 1].imshow(morphed)
             axes[i, j + 1].axis('off')
@@ -525,14 +525,14 @@ def visualize_identity_transfer_all(
 
             for i in range(n_subjects):
                 # Subject
-                img = subjects[i].permute(1, 2, 0).numpy()
+                img = subjects[i].cpu().permute(1, 2, 0).numpy()
                 axes[0, i].imshow(np.clip(img, 0, 1))
                 axes[0, i].axis('off')
                 if i == 0:
                     axes[0, i].set_ylabel("Subject", fontsize=10)
 
                 # Morphed
-                morphed = results[f"morphed_anchor_{anchor_idx}"][i].permute(1, 2, 0).numpy()
+                morphed = results[f"morphed_anchor_{anchor_idx}"][i].cpu().permute(1, 2, 0).numpy()
                 axes[1, i].imshow(np.clip(morphed, 0, 1))
                 axes[1, i].axis('off')
                 if i == 0:
