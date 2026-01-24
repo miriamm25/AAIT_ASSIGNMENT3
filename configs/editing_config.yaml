@@ -1,0 +1,151 @@
+# Task 2 - Editing Pictures with Latent Space Manipulation Configuration
+# Reference: AAIT_Assignment_3.pdf Task 2
+
+# =============================================================================
+# VAE Model (from Task 1 - FROZEN)
+# =============================================================================
+vae:
+  # Path to trained VAE checkpoint from Task 1
+  checkpoint_path: ./outputs/checkpoints/best_model.pt
+
+  # Model architecture (must match Task 1 config)
+  latent_dim: 256
+  base_channels: 64
+  blocks_per_level: 2
+  image_size: 64
+  in_channels: 3
+  predict_variance: false
+
+# =============================================================================
+# Task 2.1: Feature Amplification
+# Reference: "For component z_i, compute z'_i = z_i + α where α is scalar"
+# =============================================================================
+feature_amplification:
+  # Number of meaningful dimensions to discover
+  n_dimensions: 4
+
+  # Alpha values for amplification (10 values as per assignment)
+  alpha_range: [-3.0, 3.0]
+  n_alphas: 10
+
+  # Number of samples per dimension (8 as per assignment)
+  n_samples: 8
+
+  # Method to find meaningful dimensions
+  # Options: "variance" (high variance dims), "random", "manual"
+  discovery_method: variance
+
+  # Number of images to use for variance computation
+  n_images_for_variance: 1000
+
+  # Output directory
+  output_dir: ./outputs/editing/feature_amplification
+
+# =============================================================================
+# Task 2.2: Label Guidance
+# Reference: "Train classifier f(x) = label, set z as optimizable parameter"
+# =============================================================================
+label_guidance:
+  # Attributes to modify (4 as per assignment)
+  # CelebA attribute indices: https://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
+  # Common attributes:
+  #   15: Eyeglasses
+  #   31: Smiling
+  #   20: Male
+  #   4: Bald
+  #   5: Bangs
+  #   8: Black_Hair
+  #   9: Blond_Hair
+  #   11: Brown_Hair
+  #   24: No_Beard
+  target_attributes:
+    - name: "Eyeglasses"
+      index: 15
+      target_value: 1.0  # Add glasses
+    - name: "Smiling"
+      index: 31
+      target_value: 1.0  # Add smile
+    - name: "Male"
+      index: 20
+      target_value: 1.0  # Make more masculine
+    - name: "Bald"
+      index: 4
+      target_value: 1.0  # Make bald
+
+  # Number of samples per attribute (8 as per assignment)
+  n_samples: 8
+
+  # Optimization parameters
+  optimization:
+    lr: 0.01
+    n_steps: 200
+    # Regularization to stay close to original latent
+    regularization_weight: 0.1
+
+  # Output directory
+  output_dir: ./outputs/editing/label_guidance
+
+# =============================================================================
+# Classifier Training (for Task 2.2)
+# =============================================================================
+classifier:
+  # Backbone architecture
+  backbone: resnet18
+  pretrained: true
+
+  # Number of CelebA attributes (40 binary attributes)
+  n_attributes: 40
+
+  # Training parameters
+  batch_size: 64
+  lr: 0.0001
+  epochs: 10
+  num_workers: 4
+
+  # Checkpoint
+  checkpoint_path: ./outputs/checkpoints/attribute_classifier.pt
+
+# =============================================================================
+# Task 2.3: Identity Transfer
+# Reference: "Encode multiple images of each anchor → average latent = essence"
+# =============================================================================
+identity_transfer:
+  # Number of anchor identities (3 as per assignment)
+  n_anchors: 3
+
+  # Number of subjects to morph (8 as per assignment)
+  n_subjects: 8
+
+  # Number of images per anchor for averaging
+  n_images_per_anchor: 5
+
+  # Transfer method
+  # Options: "interpolation", "pca"
+  method: pca
+
+  # PCA parameters (if method=pca)
+  pca:
+    # Number of components to treat as "identity"
+    n_identity_components: 64
+    # Number of latents to fit PCA on
+    n_latents_for_pca: 5000
+
+  # Interpolation alpha values (for visualization)
+  alphas: [0.0, 0.3, 0.5, 0.7]
+
+  # Output directory
+  output_dir: ./outputs/editing/identity_transfer
+
+# =============================================================================
+# Data
+# =============================================================================
+data:
+  root: ./data
+  image_size: 64
+  download: true
+
+# =============================================================================
+# General
+# =============================================================================
+device: cuda
+seed: 42
