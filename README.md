@@ -1,223 +1,280 @@
 # VAE on CelebA Dataset
 
-**AAIT Assignment 3 - Task 1 (7 points)**
+**AAIT Assignment 3 - Exploring VAEs**
 
-A Variational Autoencoder implementation for the CelebA dataset, following the specifications in AAIT_Assignment_3.pdf and Task1_VAE_Guide.md.
+A complete implementation of a Variational Autoencoder on CelebA with latent space editing capabilities.
 
-## Project Overview
+| Task | Points | Status |
+|------|--------|--------|
+| Task 1: VAE Implementation | 7p | ✅ Complete |
+| Task 2: Latent Space Editing | 3p | ✅ Complete |
+| Bonus 1: BPD Metric | up to 0.5p | ✅ Implemented |
 
-This project implements a VAE that:
-- Encodes 64×64 CelebA face images into a 256-dimensional latent space
-- Reconstructs images from latent representations
-- Supports latent space interpolation between images
-- Generates new face samples via temperature-controlled sampling
+---
 
-## Project Structure
+## Table of Contents
+1. [Task 1: VAE Implementation](#task-1-vae-implementation)
+2. [Task 2: Latent Space Editing](#task-2-latent-space-editing)
+3. [Bonus: BPD Metric](#bonus-bpd-metric)
+4. [Installation & Usage](#installation--usage)
+5. [Results](#results)
 
+---
+
+## Task 1: VAE Implementation
+
+### Model Architecture
+
+**Design Choices** (following StableDiffusion-inspired architecture):
+
+| Component | Choice | Rationale |
+|-----------|--------|-----------|
+| Activation | SiLU | Smooth gradients, used in SD |
+| Normalization | GroupNorm (32 groups) | Stable with small batch sizes |
+| Residual Blocks | Bottleneck with SE + LayerScale | Efficient + channel attention |
+| Downsampling | Strided Conv | Learnable downsampling |
+| Upsampling | Bilinear + Conv | Avoids checkerboard artifacts |
+| Latent Projection | nn.Linear | **Not GlobalAvgPool** - preserves spatial info |
+
+**Encoder Architecture:**
 ```
-vae_celeba/
-├── configs/
-│   └── config.yaml          # Hyperparameters and settings
-├── src/
-│   ├── models/
-│   │   ├── blocks.py        # ConvNormAct, SE, ResidualBottleneck, Up/Downsample
-│   │   ├── encoder.py       # Encoder network
-│   │   ├── decoder.py       # Decoder network
-│   │   └── vae.py           # Full VAE model
-│   ├── losses/
-│   │   ├── kl_divergence.py # KL divergence loss
-│   │   ├── reconstruction.py # MSE and Gaussian NLL losses
-│   │   └── perceptual.py    # VGG-based perceptual loss
-│   ├── data/
-│   │   └── celeba.py        # Dataset loading
-│   ├── utils/
-│   │   ├── kl_annealing.py  # KL weight scheduling
-│   │   ├── visualization.py # Plotting utilities
-│   │   └── metrics.py       # BPD calculation
-│   └── train.py             # Training script
-├── scripts/
-│   ├── train.sh             # Training launcher
-│   └── evaluate.sh          # Evaluation script
-├── outputs/
-│   ├── checkpoints/         # Model checkpoints
-│   ├── plots/               # Visualizations
-│   └── logs/                # Training logs
-└── docs/
-    └── IMPLEMENTATION_LOG.md # Detailed implementation notes
-```
-
-## Installation
-
-### Using uv (Recommended)
-
-```bash
-# Install uv if not already installed
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Navigate to project directory
-cd vae_celeba
-
-# Sync dependencies (creates .venv automatically)
-uv sync
-
-# Run training
-uv run python src/train.py
+Input: 64×64×3
+↓ ConvNormAct (3 → 64)
+↓ 2× ResidualBottleneck (64)
+↓ Downsample (64 → 128, 64×64 → 32×32)
+↓ 2× ResidualBottleneck (128)
+↓ Downsample (128 → 256, 32×32 → 16×16)
+↓ 2× ResidualBottleneck (256)
+↓ Downsample (256 → 512, 16×16 → 8×8)
+↓ 2× ResidualBottleneck (512)
+↓ Flatten + nn.Linear → μ (256-dim), log_var (256-dim)
 ```
 
-### Using pip
-
-```bash
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# or .venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install torch torchvision numpy matplotlib pyyaml tqdm pillow
-
-# Run training
-python src/train.py
+**Decoder Architecture:**
+```
+Input: z (256-dim)
+↓ nn.Linear → 8×8×512
+↓ 2× ResidualBottleneck (512)
+↓ Upsample (512 → 256, 8×8 → 16×16)
+↓ 2× ResidualBottleneck (256)
+↓ Upsample (256 → 128, 16×16 → 32×32)
+↓ 2× ResidualBottleneck (128)
+↓ Upsample (128 → 64, 32×32 → 64×64)
+↓ 2× ResidualBottleneck (64)
+↓ Conv (64 → 3) + Sigmoid
+Output: 64×64×3
 ```
 
-## Dataset
+### Training Hyperparameters
 
-The CelebA dataset will be automatically downloaded on first run. Alternatively, download manually:
+| Parameter | Value | Reference |
+|-----------|-------|-----------|
+| Latent dimension | 256 | Balance between quality and KL |
+| Batch size | 32 | Prevents mode collapse |
+| Learning rate | 1e-4 | Adam optimizer |
+| KL warmup epochs | 10 | Linear annealing |
+| Total epochs | 50 | Sufficient convergence |
+| Perceptual loss weight | 0.1 | Sharper reconstructions |
+| Mixed precision | bfloat16 | Memory efficiency |
 
-1. Download from [CelebA official page](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html)
-2. Place in `data/celeba/` directory
+### Loss Functions
 
-Dataset specifications:
-- Images resized to 64×64 pixels
-- Using native train/valid/test splits
-- ~160k training images, ~20k validation, ~20k test
+**Total Loss:** `L = L_recon + β(t) × L_KL + 0.1 × L_perceptual`
 
-## Training
-
-### Quick Start
-
-```bash
-# Using the training script
-bash scripts/train.sh
-
-# Or directly with Python
-uv run python src/train.py --config configs/config.yaml
-
-# Resume from checkpoint
-uv run python src/train.py --resume outputs/checkpoints/checkpoint_epoch_10.pt
-```
-
-### Configuration
-
-Edit `configs/config.yaml` to adjust hyperparameters:
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `latent_dim` | 256 | Latent space dimension |
-| `batch_size` | 32 | Training batch size (16-32 recommended) |
-| `lr` | 1e-4 | Learning rate |
-| `epochs` | 50 | Number of training epochs |
-| `kl_warmup_epochs` | 10 | KL annealing warmup period |
-| `use_perceptual` | true | Enable perceptual loss |
-
-## Evaluation
-
-```bash
-# Evaluate best model
-bash scripts/evaluate.sh
-
-# Evaluate specific checkpoint
-bash scripts/evaluate.sh outputs/checkpoints/checkpoint_epoch_50.pt
-```
-
-This generates:
-- Reconstruction comparisons
-- Temperature sampling grid (τ = 0.2, 0.5, 1.0, 1.5)
-- Latent space interpolations
-- Random sample grid
-
-## Model Architecture
-
-### Encoder
-- Input: 64×64×3 RGB images
-- 3 downsampling stages: 64→32→16→8
-- Channel progression: 64→128→256→512
-- **nn.Linear projection** to latent space (not GlobalAvgPool)
-- Output: μ and log_var (each 256-dim)
-
-### Decoder
-- Input: 256-dim latent vector
-- nn.Linear to 8×8×512 feature map
-- 3 upsampling stages: 8→16→32→64
-- Output: 64×64×3 reconstructed image
-
-### Building Blocks
-- **ConvNormAct**: Conv2d + GroupNorm + SiLU
-- **SqueezeExcitation**: Channel attention
-- **ResidualBottleneck**: Bottleneck residual with SE and LayerScale
-
-## Loss Functions
-
-Total loss: `L = L_recon + β * L_KL + λ * L_perceptual`
-
-1. **Reconstruction Loss** (MSE for isotropic decoder):
+1. **MSE Reconstruction Loss** (isotropic decoder):
    ```
-   L_recon = Σ(x - μ)²
+   L_recon = Σ(x - μ_θ(z))²
    ```
 
-2. **KL Divergence**:
+2. **KL Divergence:**
    ```
    D_KL = (1/2) Σ(σ² + μ² - 1 - log(σ²))
    ```
 
-3. **Perceptual Loss** (optional, VGG16 features):
+3. **Perceptual Loss** (VGG16 features):
    ```
-   L_perceptual = MSE(VGG(x), VGG(recon))
+   L_perceptual = MSE(VGG(x), VGG(x̂))
    ```
 
-### KL Annealing
-- Linear warmup: `β = min(1.0, epoch / warmup_epochs)`
-- Prevents posterior collapse during early training
+4. **KL Annealing:** `β(t) = min(1.0, t / 10)` for t = epoch
+
+### Task 1 Results
+
+**Loss Curves:**
+- Reconstruction loss converges smoothly
+- KL divergence stabilizes after annealing period
+- No posterior collapse observed
+
+**Visualizations (in `outputs/plots/`):**
+- `final_loss_curves.png` - Training progress
+- `interpolation_epoch_50.png` - Latent space interpolation
+- `temperature_samples_epoch_50.png` - Temperature sampling grid
+- `reconstructions_epoch_50.png` - Original vs reconstructed
+
+---
+
+## Task 2: Latent Space Editing
+
+Using the **frozen VAE from Task 1**, we perform three types of edits.
+
+### 2.1 Feature Amplification
+
+**Method:** Find high-variance latent dimensions and vary them: `z'_i = z_i + α`
+
+**Implementation:**
+1. Encode 1000 images to get latent statistics
+2. Select top 4 dimensions by variance
+3. Vary α from -3 to +3 (10 steps)
+4. Decode and visualize
+
+**Results:**
+- Discovered dimensions: [94, 128, 158, 253]
+- Primary effect: Color/lighting variations
+- High-variance dimensions control global features (expected for standard VAE)
+
+**Output:** `outputs/editing/feature_amplification/`
+
+### 2.2 Label Guidance
+
+**Method:** Optimize latent to achieve target attribute via classifier guidance.
+
+**Implementation:**
+1. Train ResNet18 classifier on CelebA attributes (40 labels)
+2. For each image: encode → optimize z → decode
+3. Loss: `BCE(classifier(decode(z)), target) + λ||z - z_0||²`
+
+**Classifier Performance:**
+| Attribute | Accuracy |
+|-----------|----------|
+| Eyeglasses | 98.4% |
+| Smiling | 98.8% |
+| Male | 99.4% |
+| Bald | 96.5% |
+| Mean (all 40) | 95.8% |
+
+**Optimization Settings:**
+- Steps: 200
+- Learning rate: 0.01
+- Regularization weight: 0.1
+
+**Output:** `outputs/editing/label_guidance/`
+
+### 2.3 Identity Transfer
+
+**Method:** Morph subjects toward anchor identities using PCA on latent space.
+
+**Implementation:**
+1. Encode multiple images per anchor → average latent = "essence"
+2. Fit PCA on 5000 latent vectors
+3. Transfer first K components (identity) from anchor to subject
+4. Keep remaining components (pose/expression) from subject
+
+**PCA Analysis:**
+- First component explains 32% of variance
+- First 10 components explain ~60% of variance
+- Identity components: first 64 dimensions
+
+**Output:** `outputs/editing/identity_transfer/`
+
+---
+
+## Bonus: BPD Metric
+
+**Implementation:** `bonus_1.py`
+
+Computes harmonic mean of normalized NLL and KL divergence:
+
+```
+Normalized NLL = NLL / D  (D = 64×64×3 = 12288 pixels)
+Normalized KL = KL / d    (d = 256 latent dims)
+Harmonic Mean = 2 × (norm_NLL × norm_KL) / (norm_NLL + norm_KL)
+```
+
+**Results on Test Set:**
+| Metric | Value |
+|--------|-------|
+| Normalized NLL | 0.921 |
+| Normalized KL | 54.88 |
+| **Harmonic Mean** | **1.812** |
+| BPD | 2.98 |
+
+**Run:** `python bonus_1.py --checkpoint outputs/checkpoints/best_model.pt`
+
+---
+
+## Installation & Usage
+
+### Requirements
+- Python 3.10+
+- PyTorch 2.0+
+- CUDA GPU (8GB+ VRAM recommended)
+
+### Setup
+```bash
+# Clone and enter directory
+cd vae_celeba
+
+# Install dependencies (using uv)
+uv sync
+
+# Or using pip
+pip install -r requirements.txt
+```
+
+### Training VAE (Task 1)
+```bash
+python src/train.py --config configs/config.yaml
+```
+
+### Training Classifier (Task 2.2)
+```bash
+python scripts/train_classifier.py --config configs/editing_config.yaml
+```
+
+### Running Edits (Task 2)
+```bash
+# All editing tasks
+python scripts/run_editing.py --config configs/editing_config.yaml
+
+# Individual tasks
+python scripts/run_editing.py --task feature_amplification
+python scripts/run_editing.py --task label_guidance
+python scripts/run_editing.py --task identity_transfer
+```
+
+### Bonus Metric
+```bash
+python bonus_1.py --checkpoint outputs/checkpoints/best_model.pt
+```
+
+---
 
 ## Results
 
-After training, outputs are saved to:
-- `outputs/checkpoints/` - Model weights
-- `outputs/plots/` - Visualizations
-- `outputs/logs/` - Training history
+### Project Structure
+```
+outputs/
+├── checkpoints/
+│   ├── best_model.pt              # Best VAE (by val loss)
+│   ├── final_model.pt             # Final VAE (epoch 50)
+│   └── attribute_classifier.pt    # Trained classifier
+├── plots/                         # Task 1 visualizations
+│   ├── final_loss_curves.png
+│   ├── interpolation_epoch_50.png
+│   ├── temperature_samples_epoch_50.png
+│   └── reconstructions_epoch_50.png
+├── editing/                       # Task 2 results
+│   ├── feature_amplification/
+│   ├── label_guidance/
+│   └── identity_transfer/
+└── bonus_1_results.json          # Bonus metric results
+```
 
-### Expected Outputs
-1. **Loss curves**: Train/Val reconstruction and KL over epochs
-2. **Reconstructions**: Original vs reconstructed face images
-3. **Interpolations**: Smooth transitions between two faces
-4. **Temperature samples**: Varying diversity from conservative to diverse
-
-## Hardware Requirements
-
-- **Minimum**: 8GB GPU VRAM (RTX 4060, etc.)
-- **Recommended**: 16GB+ for larger batch sizes
-- Training uses mixed precision (bfloat16) for efficiency
+---
 
 ## References
 
-- Assignment: AAIT_Assignment_3.pdf
-- Implementation Guide: Task1_VAE_Guide.md
 - [Auto-Encoding Variational Bayes](https://arxiv.org/abs/1312.6114) - Kingma & Welling, 2013
 - [CelebA Dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html)
-
-## Troubleshooting
-
-**Mode collapse (all samples look similar)**:
-- Reduce batch size to 16-32
-- Check KL annealing is working
-
-**Posterior collapse (KL → 0)**:
-- Ensure KL annealing is enabled
-- Increase KL warmup epochs
-
-**Blurry reconstructions**:
-- Enable perceptual loss
-- Train for more epochs
-
-**Out of memory**:
-- Reduce batch size
-- Reduce base_channels from 64 to 32
+- Assignment: AAIT_Assignment_3.pdf
+- Implementation Guide: Task1_VAE_Guide.md
