@@ -1,0 +1,14 @@
+{
+  "anchor_ids": [
+    2820,
+    3699,
+    9152
+  ],
+  "n_images_per_anchor": 10,
+  "n_subjects": 8,
+  "method": "pca",
+  "method_params": {
+    "n_latents_for_pca": 5000,
+    "n_identity_components": 64
+  }
+}

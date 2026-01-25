@@ -1,0 +1,20 @@
+{
+  "dimensions_tested": [
+    94,
+    128,
+    158,
+    253
+  ],
+  "alpha_ranges": {
+    "narrow": [
+      -3,
+      3
+    ],
+    "wide": [
+      -5,
+      5
+    ]
+  },
+  "n_alphas": 10,
+  "n_samples": 8
+}

@@ -1,0 +1,138 @@
+{
+  "dimensions": [
+    {
+      "rank": 1,
+      "dimension": 94,
+      "variance": 413.368408203125,
+      "suggested_label": "Feature_1_to_investigate"
+    },
+    {
+      "rank": 2,
+      "dimension": 128,
+      "variance": 293.4606628417969,
+      "suggested_label": "Feature_2_to_investigate"
+    },
+    {
+      "rank": 3,
+      "dimension": 158,
+      "variance": 272.7286682128906,
+      "suggested_label": "Feature_3_to_investigate"
+    },
+    {
+      "rank": 4,
+      "dimension": 253,
+      "variance": 239.07077026367188,
+      "suggested_label": "Feature_4_to_investigate"
+    },
+    {
+      "rank": 5,
+      "dimension": 113,
+      "variance": 230.3746795654297,
+      "suggested_label": "Feature_5_to_investigate"
+    },
+    {
+      "rank": 6,
+      "dimension": 165,
+      "variance": 229.67144775390625,
+      "suggested_label": "Feature_6_to_investigate"
+    },
+    {
+      "rank": 7,
+      "dimension": 15,
+      "variance": 212.34503173828125,
+      "suggested_label": "Feature_7_to_investigate"
+    },
+    {
+      "rank": 8,
+      "dimension": 156,
+      "variance": 186.00827026367188,
+      "suggested_label": "Feature_8_to_investigate"
+    },
+    {
+      "rank": 9,
+      "dimension": 242,
+      "variance": 178.89939880371094,
+      "suggested_label": "Feature_9_to_investigate"
+    },
+    {
+      "rank": 10,
+      "dimension": 225,
+      "variance": 170.99169921875,
+      "suggested_label": "Feature_10_to_investigate"
+    },
+    {
+      "rank": 11,
+      "dimension": 63,
+      "variance": 146.84996032714844,
+      "suggested_label": "Feature_11_to_investigate"
+    },
+    {
+      "rank": 12,
+      "dimension": 170,
+      "variance": 139.93724060058594,
+      "suggested_label": "Feature_12_to_investigate"
+    },
+    {
+      "rank": 13,
+      "dimension": 83,
+      "variance": 130.78802490234375,
+      "suggested_label": "Feature_13_to_investigate"
+    },
+    {
+      "rank": 14,
+      "dimension": 12,
+      "variance": 126.15272521972656,
+      "suggested_label": "Feature_14_to_investigate"
+    },
+    {
+      "rank": 15,
+      "dimension": 197,
+      "variance": 120.57459259033203,
+      "suggested_label": "Feature_15_to_investigate"
+    },
+    {
+      "rank": 16,
+      "dimension": 223,
+      "variance": 119.51548767089844,
+      "suggested_label": "Feature_16_to_investigate"
+    },
+    {
+      "rank": 17,
+      "dimension": 70,
+      "variance": 115.61182403564453,
+      "suggested_label": "Feature_17_to_investigate"
+    },
+    {
+      "rank": 18,
+      "dimension": 172,
+      "variance": 110.67903137207031,
+      "suggested_label": "Feature_18_to_investigate"
+    },
+    {
+      "rank": 19,
+      "dimension": 24,
+      "variance": 98.90951538085938,
+      "suggested_label": "Feature_19_to_investigate"
+    },
+    {
+      "rank": 20,
+      "dimension": 131,
+      "variance": 97.18826293945312,
+      "suggested_label": "Feature_20_to_investigate"
+    }
+  ],
+  "total_dimensions_explored": 20,
+  "alphas_used": [
+    -3.0,
+    -2.3333333333333335,
+    -1.6666666666666667,
+    -1.0,
+    -0.3333333333333335,
+    0.33333333333333304,
+    1.0,
+    1.666666666666666,
+    2.333333333333333,
+    3.0
+  ],
+  "n_samples_per_dimension": 4
+}
